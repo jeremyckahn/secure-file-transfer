@@ -56,7 +56,7 @@ export class FileTransfer {
         const readStream = nodeToWebStream(file.createReadStream())
 
         const writeStream = streamSaver.createWriteStream(file.name, {
-          size: plaintextSize(file.length),
+          size: file.length,
         })
 
         await readStream.pipeTo(writeStream)
@@ -79,6 +79,10 @@ export class FileTransfer {
   ) {
     let torrent = this.torrents[magnetURI]
 
+    const handleDownload = () => {
+      onProgress?.(torrent.progress)
+    }
+
     if (!torrent) {
       const { isPrivate } = await detectIncognito()
 
@@ -100,13 +104,15 @@ export class FileTransfer {
       })
 
       this.torrents[torrent.magnetURI] = torrent
-    }
 
-    const handleDownload = () => {
-      onProgress?.(torrent.progress)
-    }
+      torrent.on('download', handleDownload)
 
-    torrent.on('download', handleDownload)
+      await new Promise<void>(resolve => {
+        torrent.on('done', () => {
+          resolve()
+        })
+      })
+    }
 
     const decryptedFiles = await Promise.all(
       torrent.files.map(async file => {
