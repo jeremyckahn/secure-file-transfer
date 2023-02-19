@@ -1,6 +1,6 @@
 import { FileTransfer, fileTransfer } from '../src'
 
-describe('blah', () => {
+describe('FileTransfer', () => {
   it('instantiates', () => {
     expect(fileTransfer).toBeInstanceOf(FileTransfer)
   })
