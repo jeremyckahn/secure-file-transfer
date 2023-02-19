@@ -5,6 +5,7 @@ import { Keychain, plaintextSize, encryptedSize } from 'wormhole-crypto'
 import idbChunkStore from 'idb-chunk-store'
 import { detectIncognito } from 'detectincognitojs'
 import nodeToWebStream from 'readable-stream-node-to-web'
+import { ReadableWebToNodeStream } from 'readable-web-to-node-stream'
 
 export const setStreamSaverMitm = (mitm: string) => {
   streamSaver.mitm = mitm
@@ -36,10 +37,20 @@ export class FileTransfer {
 
   private torrents: Record<Torrent['magnetURI'], Torrent> = {}
 
-  private async saveTorrentFiles(torrent: Torrent, password: string) {
-    for (const file of torrent.files) {
+  private async getDecryptedFileReadStream(file: TorrentFile, password: string) {
+    const keychain = getKeychain(password)
+
+    const decryptedStream: ReadableStream = await keychain.decryptStream(
+      nodeToWebStream(file.createReadStream())
+    )
+
+    return decryptedStream
+  }
+
+  private async saveTorrentFiles(files: TorrentFile[]) {
+    for (const file of files) {
       try {
-        const readStream = await this.getDecryptedFileReadStream(file, password)
+        const readStream = nodeToWebStream(file.createReadStream())
 
         const writeStream = streamSaver.createWriteStream(file.name, {
           size: plaintextSize(file.length),
@@ -56,16 +67,6 @@ export class FileTransfer {
   constructor({ torrentOpts = {} }: { torrentOpts?: TorrentOptions } = {}) {
     this.torrentOpts = torrentOpts
     window.addEventListener('beforeunload', this.handleBeforePageUnload)
-  }
-
-  async getDecryptedFileReadStream(file: TorrentFile, password: string) {
-    const keychain = getKeychain(password)
-
-    const decryptedStream: ReadableStream = await keychain.decryptStream(
-      nodeToWebStream(file.createReadStream())
-    )
-
-    return decryptedStream
   }
 
   async download(
@@ -104,9 +105,30 @@ export class FileTransfer {
 
     torrent.on('download', handleDownload)
 
+    const decryptedFiles = await Promise.all(
+      torrent.files.map(async file => {
+        const readableStream = await this.getDecryptedFileReadStream(
+          file,
+          password
+        )
+        const nodeReadableSteam = new ReadableWebToNodeStream(readableStream)
+
+        const decryptedFile: TorrentFile = Object.setPrototypeOf(
+          {
+            ...file,
+            length: plaintextSize(file.length),
+            createReadStream: () => nodeReadableSteam,
+          },
+          Object.getPrototypeOf(file)
+        )
+
+        return decryptedFile
+      })
+    )
+
     if (doSave) {
       try {
-        await this.saveTorrentFiles(torrent, password)
+        await this.saveTorrentFiles(decryptedFiles)
       } catch (e) {
         torrent.off('download', handleDownload)
 
@@ -115,7 +137,7 @@ export class FileTransfer {
       }
     }
 
-    return torrent.files
+    return decryptedFiles
   }
 
   async offer(files: File[] | FileList, password: string) {
