@@ -8,8 +8,13 @@ import nodeToWebStream from 'readable-stream-node-to-web'
 
 // TODO:
 //
-//   - Make streamSaver.mitm configurable
 //   - Make WebTorrent options configurable
+
+export const setStreamSaverMitm = (mitm: string) => {
+  streamSaver.mitm = mitm
+}
+
+export const getStreamSaverMitm = () => streamSaver.mitm
 
 const getKeychain = (password: string) => {
   const encoder = new TextEncoder()
