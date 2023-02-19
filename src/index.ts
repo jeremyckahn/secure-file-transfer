@@ -1,14 +1,10 @@
 /// <reference path = "./external-types.d.ts" />
-import WebTorrent, { Torrent, TorrentFile } from 'webtorrent'
+import WebTorrent, { Torrent, TorrentFile, TorrentOptions } from 'webtorrent'
 import streamSaver from 'streamsaver'
 import { Keychain, plaintextSize, encryptedSize } from 'wormhole-crypto'
 import idbChunkStore from 'idb-chunk-store'
 import { detectIncognito } from 'detectincognitojs'
 import nodeToWebStream from 'readable-stream-node-to-web'
-
-// TODO:
-//
-//   - Make WebTorrent options configurable
 
 export const setStreamSaverMitm = (mitm: string) => {
   streamSaver.mitm = mitm
@@ -34,6 +30,8 @@ interface DownloadOpts {
 }
 
 export class FileTransfer {
+  private torrentOpts: TorrentOptions
+
   private webTorrentClient = new WebTorrent()
 
   private torrents: Record<Torrent['magnetURI'], Torrent> = {}
@@ -55,7 +53,8 @@ export class FileTransfer {
     }
   }
 
-  constructor() {
+  constructor({ torrentOpts = {} }: { torrentOpts?: TorrentOptions } = {}) {
+    this.torrentOpts = torrentOpts
     window.addEventListener('beforeunload', this.handleBeforePageUnload)
   }
 
@@ -88,6 +87,7 @@ export class FileTransfer {
             // In that case, fall back to the default in-memory data store.
             store: isPrivate ? undefined : idbChunkStore,
             destroyStoreOnDestroy: true,
+            ...this.torrentOpts,
           },
           torrent => {
             res(torrent)
@@ -180,6 +180,7 @@ export class FileTransfer {
           // case, fall back to the default in-memory data store.
           store: isPrivate ? undefined : idbChunkStore,
           destroyStoreOnDestroy: true,
+          ...this.torrentOpts,
         },
         torrent => {
           res(torrent)
