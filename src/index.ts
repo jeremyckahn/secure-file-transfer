@@ -37,7 +37,10 @@ export class FileTransfer {
 
   private torrents: Record<Torrent['magnetURI'], Torrent> = {}
 
-  private async getDecryptedFileReadStream(file: TorrentFile, password: string) {
+  private async getDecryptedFileReadStream(
+    file: TorrentFile,
+    password: string
+  ) {
     const keychain = getKeychain(password)
 
     const decryptedStream: ReadableStream = await keychain.decryptStream(
