@@ -11,6 +11,9 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      CI_COMMIT_AUTHOR: ${{ github.event.repository.name }} Continuous Integration
+
     steps:
       - name: Check out repo
         uses: actions/checkout@v3
@@ -42,8 +45,8 @@ jobs:
 
       - name: Push tag commit
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
+          git config user.name "${{ env.CI_COMMIT_AUTHOR }}"
+          git config user.email "jeremyckahn@users.noreply.github.com"
           git push
 
       - name: Publish to NPM
