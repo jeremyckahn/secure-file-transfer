@@ -1,0 +1,65 @@
+name: Release New Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      releaseType:
+        description: 'Release type'
+        required: true
+        default: 'patch'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+          ref: main
+
+      - name: Setup Git user
+        uses: fregante/setup-git-user@v1
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Tag release
+        run: npm version ${{ github.event.inputs.releaseType }}
+
+        # Sets new package version as ${{ env.PACKAGE_VERSION }}
+      - uses: jozsefsallai/node-package-version@v1.0.4
+
+      - name: Push tag commit
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git push
+
+      - name: Publish to NPM
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Prepare Web Artifacts
+        run: zip secure-file-transfer-${{ env.PACKAGE_VERSION }}.zip -r dist/*
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.PACKAGE_VERSION }}
+          name: ${{ env.PACKAGE_VERSION }}
+          draft: false
+          prerelease: false
+          files: |
+            ./secure-file-transfer-web-${{ env.PACKAGE_VERSION }}.zip
