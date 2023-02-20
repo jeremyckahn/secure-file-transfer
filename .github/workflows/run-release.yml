@@ -23,8 +23,8 @@ jobs:
 
       - name: Set Git credentials
         run: |
-          git config user.email "jeremyckahn@gmail.com"
-          git config user.name "Jeremy Kahn"
+          git config user.email "github-actions@github.com"
+          git config user.name "github-actions"
 
       - name: Setup Node
         uses: actions/setup-node@v3
