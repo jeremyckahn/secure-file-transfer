@@ -40,6 +40,8 @@ jobs:
 
       - name: Push tag commit
         run: |
+          git config user.email "jeremyckahn@gmail.com"
+          git config user.name "Jeremy Kahn"
           git push
 
       - name: Publish to NPM
