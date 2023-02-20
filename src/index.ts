@@ -64,9 +64,6 @@ export class FileTransfer {
     }
   }
 
-  /**
-   * @param
-   */
   constructor(options: FileTransferOpts = {}) {
     const { torrentOpts = {} } = options
     this.torrentOpts = torrentOpts
