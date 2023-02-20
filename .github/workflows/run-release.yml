@@ -42,8 +42,6 @@ jobs:
 
       - name: Push tag commit
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
           git push
 
       - name: Publish to NPM
