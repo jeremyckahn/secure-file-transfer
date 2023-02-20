@@ -20,9 +20,6 @@ jobs:
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Git user
-        uses: fregante/setup-git-user@v1
-
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
