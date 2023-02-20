@@ -12,6 +12,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+
       - name: Check out repo
         uses: actions/checkout@v3
         with:
@@ -19,6 +20,11 @@ jobs:
           persist-credentials: true
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set Git credentials
+        run: |
+          git config user.email "jeremyckahn@gmail.com"
+          git config user.name "Jeremy Kahn"
 
       - name: Setup Node
         uses: actions/setup-node@v3
@@ -40,8 +46,6 @@ jobs:
 
       - name: Push tag commit
         run: |
-          git config user.email "jeremyckahn@gmail.com"
-          git config user.name "Jeremy Kahn"
           git push
 
       - name: Publish to NPM
