@@ -1,29 +1,18 @@
 /// <reference path = "./external-types.d.ts" />
 import WebTorrent, { Torrent, TorrentFile, TorrentOptions } from 'webtorrent'
 import streamSaver from 'streamsaver'
-import { Keychain, plaintextSize, encryptedSize } from 'wormhole-crypto'
+import { plaintextSize, encryptedSize } from 'wormhole-crypto'
 import idbChunkStore from 'idb-chunk-store'
 import { detectIncognito } from 'detectincognitojs'
 import nodeToWebStream from 'readable-stream-node-to-web'
 import { ReadableWebToNodeStream } from 'readable-web-to-node-stream'
+import { getKeychain } from './getKeychain'
 
 export const setStreamSaverMitm = (mitm: string) => {
   streamSaver.mitm = mitm
 }
 
 export const getStreamSaverMitm = () => streamSaver.mitm
-
-const getKeychain = (password: string) => {
-  const encoder = new TextEncoder()
-  const keyLength = 16
-  const padding = new Array(keyLength).join('0')
-  const key = password.concat(padding).slice(0, keyLength)
-  const salt = window.location.origin.concat(padding).slice(0, keyLength)
-
-  const keychain = new Keychain(encoder.encode(key), encoder.encode(salt))
-
-  return keychain
-}
 
 interface DownloadOpts {
   doSave?: boolean
