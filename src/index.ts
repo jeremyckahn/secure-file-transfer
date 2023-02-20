@@ -1,5 +1,9 @@
 /// <reference path = "./external-types.d.ts" />
-import WebTorrent, { Torrent, TorrentFile, TorrentOptions } from 'webtorrent'
+import WebTorrent, {
+  Torrent,
+  TorrentFile as _TorrentFile,
+  TorrentOptions,
+} from 'webtorrent'
 import streamSaver from 'streamsaver'
 import { plaintextSize, encryptedSize } from 'wormhole-crypto'
 import idbChunkStore from 'idb-chunk-store'
@@ -8,14 +12,35 @@ import nodeToWebStream from 'readable-stream-node-to-web'
 import { ReadableWebToNodeStream } from 'readable-web-to-node-stream'
 import { getKeychain } from './getKeychain'
 
+/**
+ * @see https://github.com/webtorrent/webtorrent/blob/master/docs/api.md#file-api
+ */
+export type TorrentFile = _TorrentFile
+
+/**
+ * The custom StreamSaver `mitm` string to use.
+ * @see https://github.com/jimmywarting/StreamSaver.js/#configuration
+ */
 export const setStreamSaverMitm = (mitm: string) => {
   streamSaver.mitm = mitm
 }
 
+/**
+ * The custom StreamSaver `mitm` string being used.
+ * @see https://github.com/jimmywarting/StreamSaver.js/#configuration
+ */
 export const getStreamSaverMitm = () => streamSaver.mitm
 
 export interface DownloadOpts {
+  /**
+   * Whether to save the downloaded files to the user's file system.
+   */
   doSave?: boolean
+
+  /**
+   * Callback invoked every time a chunk of data is received. `progress` is the
+   * normalized (0-1) percentage value of download progress.
+   */
   onProgress?: (progress: number) => void
 }
 
@@ -64,17 +89,35 @@ export class FileTransfer {
     }
   }
 
+  private handleBeforePageUnload = () => {
+    this.rescindAll()
+  }
+
   constructor(options: FileTransferOpts = {}) {
     const { torrentOpts = {} } = options
     this.torrentOpts = torrentOpts
     window.addEventListener('beforeunload', this.handleBeforePageUnload)
   }
 
+  /**
+   * Downloads and decrypts the files associated with `magnetURI`. For the
+   * download operation to succeed, the peer offering the file **must**
+   * maintain their offer until the downloading peer has finished downloading
+   * the data.
+   *
+   * @param magnetURI A string that was returned by {@link FileTransfer#offer |
+   * `offer`}.
+   * @param password The password to decrypt the files with. Must be the same
+   * as the `password` parameter that was provided to the {@link
+   * FileTransfer#offer | `offer`} call that produced `magnetURI`.
+   * @returns An array of downloaded {@link TorrentFile | files}.
+   */
   async download(
     magnetURI: string,
     password: string,
-    { onProgress, doSave }: DownloadOpts = {}
+    downloadOpts: DownloadOpts = {}
   ) {
+    const { onProgress, doSave } = downloadOpts
     let torrent = this.torrents[magnetURI]
 
     const handleDownload = () => {
@@ -149,6 +192,14 @@ export class FileTransfer {
 
   /**
    * Makes a list of files available to others to download.
+   * @param files The
+   * [`File`](https://developer.mozilla.org/docs/Web/API/File)s to offer to a
+   * peer.
+   * @param password The encryption key for the files.
+   * @returns The [torrent magnet
+   * URI](https://github.com/webtorrent/webtorrent/blob/master/docs/api.md#torrentmagneturi)
+   * that peers can use to download the offered file with {@link
+   * FileTransfer#download | `download`}.
    */
   async offer(files: File[] | FileList, password: string) {
     const { isPrivate } = await detectIncognito()
@@ -226,6 +277,10 @@ export class FileTransfer {
     return magnetURI
   }
 
+  /**
+   * Rescinds a file offer that was made by {@link FileTransfer#offer |
+   * `offer`}.
+   */
   rescind(magnetURI: string) {
     const torrent = this.torrents[magnetURI]
 
@@ -238,19 +293,24 @@ export class FileTransfer {
     delete this.torrents[magnetURI]
   }
 
+  /**
+   * Rescinds all file offers.
+   */
   rescindAll() {
     for (const magnetURI in this.torrents) {
       this.rescind(magnetURI)
     }
   }
 
+  /**
+   * Whether or not an offer associated with `magnetURI` is currently being
+   * made.
+   */
   isOffering(magnetURI: string) {
     return magnetURI in this.torrents
   }
 
-  handleBeforePageUnload = () => {
-    this.rescindAll()
-  }
+  // TODO: There needs to be an API for destroying instances.
 }
 
 export const fileTransfer = new FileTransfer()
