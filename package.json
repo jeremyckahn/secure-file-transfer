@@ -18,7 +18,8 @@
     "lint": "tsdx lint",
     "prepare": "tsdx build",
     "size": "size-limit",
-    "analyze": "size-limit --why"
+    "analyze": "size-limit --why",
+    "release:patch": "gh workflow run run-release.yml -f releaseType=patch"
   },
   "husky": {
     "hooks": {
