@@ -14,9 +14,17 @@ export const setStreamSaverMitm = (mitm: string) => {
 
 export const getStreamSaverMitm = () => streamSaver.mitm
 
-interface DownloadOpts {
+export interface DownloadOpts {
   doSave?: boolean
   onProgress?: (progress: number) => void
+}
+
+export interface FileTransferOpts {
+  /**
+   * Options to configure WebTorrent operations with.
+   * @see https://github.com/webtorrent/webtorrent/blob/master/docs/api.md#clientaddtorrentid-opts-function-ontorrent-torrent-
+   */
+  torrentOpts?: TorrentOptions
 }
 
 export class FileTransfer {
@@ -56,7 +64,11 @@ export class FileTransfer {
     }
   }
 
-  constructor({ torrentOpts = {} }: { torrentOpts?: TorrentOptions } = {}) {
+  /**
+   * @param
+   */
+  constructor(options: FileTransferOpts = {}) {
+    const { torrentOpts = {} } = options
     this.torrentOpts = torrentOpts
     window.addEventListener('beforeunload', this.handleBeforePageUnload)
   }
@@ -130,7 +142,7 @@ export class FileTransfer {
       } catch (e) {
         torrent.off('download', handleDownload)
 
-        // Propagate error to the UI
+        // Propagate error to the caller
         throw e
       }
     }
@@ -138,6 +150,9 @@ export class FileTransfer {
     return decryptedFiles
   }
 
+  /**
+   * Makes a list of files available to others to download.
+   */
   async offer(files: File[] | FileList, password: string) {
     const { isPrivate } = await detectIncognito()
 

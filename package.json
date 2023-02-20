@@ -13,6 +13,7 @@
   "scripts": {
     "start": "tsdx watch",
     "build": "tsdx build",
+    "build:docs": "typedoc src/index.ts",
     "test": "tsdx test",
     "test:watch": "tsdx test --watch",
     "lint": "tsdx lint",
@@ -53,6 +54,7 @@
     "ts-jest": "^29.0.5",
     "tsdx": "^0.14.1",
     "tslib": "^2.5.0",
+    "typedoc": "^0.23.25",
     "typescript": "^4.9.5"
   },
   "dependencies": {
