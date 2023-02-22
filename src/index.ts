@@ -1,5 +1,6 @@
 /// <reference path = "./external-types.d.ts" />
 import WebTorrent, {
+  Options as InstanceOptions,
   Torrent,
   TorrentFile as _TorrentFile,
   TorrentOptions,
@@ -64,7 +65,21 @@ export interface OfferOpts {
 
 export interface FileTransferOpts {
   /**
-   * Options to configure WebTorrent operations with.
+   * Options to configure the internal WebTorrent instance with.
+   * @see https://github.com/webtorrent/webtorrent/blob/master/docs/api.md#client--new-webtorrentopts
+   * @see
+   * [`RTCConfiguration`](https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/RTCPeerConnection#parameters)
+   * @see [How to configure WebTorrent to use a custom `rtcConfig` (such as for
+   * STUN/TURN
+   * servers)](https://gist.github.com/swapnilshrikhande/e694ceb7f51a7c4ed2986d6d6a43c4a6)
+   */
+  webtorrentInstanceOpts?: InstanceOptions &
+    Partial<{
+      tracker: { rtcConfig: RTCConfiguration }
+    }>
+
+  /**
+   * Options to configure WebTorrent `seed` and `add` operations with.
    * @see https://github.com/webtorrent/webtorrent/blob/master/docs/api.md#clientaddtorrentid-opts-function-ontorrent-torrent-
    */
   torrentOpts?: TorrentOptions
@@ -108,8 +123,8 @@ export class FileTransfer {
   }
 
   constructor(options: FileTransferOpts = {}) {
-    const { torrentOpts = {} } = options
-    this.webTorrentClient = new WebTorrent()
+    const { torrentOpts = {}, webtorrentInstanceOpts } = options
+    this.webTorrentClient = new WebTorrent(webtorrentInstanceOpts)
     this.torrentOpts = torrentOpts
     window.addEventListener('beforeunload', this.destroy)
   }
