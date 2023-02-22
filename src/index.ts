@@ -73,7 +73,7 @@ export interface FileTransferOpts {
 export class FileTransfer {
   private torrentOpts: TorrentOptions
 
-  private webTorrentClient = new WebTorrent()
+  private webTorrentClient: WebTorrent.Instance
 
   private torrents: Record<Torrent['magnetURI'], Torrent> = {}
 
@@ -109,6 +109,7 @@ export class FileTransfer {
 
   constructor(options: FileTransferOpts = {}) {
     const { torrentOpts = {} } = options
+    this.webTorrentClient = new WebTorrent()
     this.torrentOpts = torrentOpts
     window.addEventListener('beforeunload', this.destroy)
   }
