@@ -42,6 +42,24 @@ export interface DownloadOpts {
    * normalized (0-1) percentage value of download progress.
    */
   onProgress?: (progress: number) => void
+
+  /**
+   * Additional `TorrentOptions` to provide to WebTorrent for the download.
+   * Merges with and overrides any options provided via the {@link
+   * FileTransfer} constructor's `torrentOpts` option.
+   * @see https://github.com/webtorrent/webtorrent/blob/master/docs/api.md#clientaddtorrentid-opts-function-ontorrent-torrent-
+   */
+  torrentOpts?: TorrentOptions
+}
+
+export interface OfferOpts {
+  /**
+   * Additional `TorrentOptions` to provide to WebTorrent for the offer. Merges
+   * with and overrides any options provided via the {@link FileTransfer}
+   * constructor's `torrentOpts` option.
+   * @see https://github.com/webtorrent/webtorrent/blob/master/docs/api.md#clientaddtorrentid-opts-function-ontorrent-torrent-
+   */
+  torrentOpts?: TorrentOptions
 }
 
 export interface FileTransferOpts {
@@ -121,7 +139,7 @@ export class FileTransfer {
     password: string,
     downloadOpts: DownloadOpts = {}
   ) {
-    const { onProgress, doSave } = downloadOpts
+    const { onProgress, doSave, torrentOpts } = downloadOpts
     let torrent = this.torrents[magnetURI]
 
     const handleDownload = () => {
@@ -141,6 +159,7 @@ export class FileTransfer {
             store: isPrivate ? undefined : idbChunkStore,
             destroyStoreOnDestroy: true,
             ...this.torrentOpts,
+            ...torrentOpts,
           },
           torrent => {
             res(torrent)
@@ -205,7 +224,12 @@ export class FileTransfer {
    * that peers can use to download the offered file with {@link
    * FileTransfer#download | `download`}.
    */
-  async offer(files: File[] | FileList, password: string) {
+  async offer(
+    files: File[] | FileList,
+    password: string,
+    offerOpts: OfferOpts = {}
+  ) {
+    const { torrentOpts } = offerOpts
     const { isPrivate } = await detectIncognito()
 
     const filesToSeed: File[] =
@@ -268,6 +292,7 @@ export class FileTransfer {
           store: isPrivate ? undefined : idbChunkStore,
           destroyStoreOnDestroy: true,
           ...this.torrentOpts,
+          ...torrentOpts,
         },
         torrent => {
           res(torrent)
