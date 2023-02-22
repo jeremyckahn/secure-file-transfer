@@ -110,14 +110,14 @@ export class FileTransfer {
   constructor(options: FileTransferOpts = {}) {
     const { torrentOpts = {} } = options
     this.torrentOpts = torrentOpts
-    window.addEventListener('beforeunload', this.destory)
+    window.addEventListener('beforeunload', this.destroy)
   }
 
   /**
    * General-purpose cleanup method for when this `FileTransfer` instance is no
    * longer needed.
    */
-  destory() {
+  destroy() {
     this.rescindAll()
   }
 
