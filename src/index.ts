@@ -89,14 +89,18 @@ export class FileTransfer {
     }
   }
 
-  private handleBeforePageUnload = () => {
-    this.rescindAll()
-  }
-
   constructor(options: FileTransferOpts = {}) {
     const { torrentOpts = {} } = options
     this.torrentOpts = torrentOpts
-    window.addEventListener('beforeunload', this.handleBeforePageUnload)
+    window.addEventListener('beforeunload', this.destory)
+  }
+
+  /**
+   * General-purpose cleanup method for when this `FileTransfer` instance is no
+   * longer needed.
+   */
+  destory() {
+    this.rescindAll()
   }
 
   /**
@@ -309,8 +313,6 @@ export class FileTransfer {
   isOffering(magnetURI: string) {
     return magnetURI in this.torrents
   }
-
-  // TODO: There needs to be an API for destroying instances.
 }
 
 export const fileTransfer = new FileTransfer()
