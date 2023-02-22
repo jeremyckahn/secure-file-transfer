@@ -126,7 +126,7 @@ export class FileTransfer {
     const { torrentOpts = {}, webtorrentInstanceOpts } = options
     this.webTorrentClient = new WebTorrent(webtorrentInstanceOpts)
     this.torrentOpts = torrentOpts
-    window.addEventListener('beforeunload', this.destroy)
+    window.addEventListener('beforeunload', () => this.destroy())
   }
 
   /**
