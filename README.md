@@ -29,7 +29,7 @@ By default, WebTorrent stores torrents in system memory. This is also not suitab
 
 SFT has no hard limits around file sizes, but there are a number of browser limitations to keep in mind.
 
-Since torrent data is temporarily held in IndexedDB via idb-chunk-store (to minimize memory usage), it is subject to browser [storage limits](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Browser_storage_limits_and_eviction_criteria#storage_limits). Once downloaded, the data is streamed from IndexedDB to the local file system as a plain file via StreamSaver.js. However, browsers will limit how long the stream can last. Currently, the time limit for this operation is [30 seconds for Firefox](https://github.com/jimmywarting/StreamSaver.js/issues/292) and [5 minutes for Chromium-based browsers](https://github.com/jimmywarting/StreamSaver.js#best-practice).
+Since torrent data is temporarily held in IndexedDB via idb-chunk-store (to minimize memory usage), it is subject to browser [storage limits](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Browser_storage_limits_and_eviction_criteria#storage_limits). Once downloaded, the data is streamed from IndexedDB to the local file system as a plain file via StreamSaver.js. However, browsers will limit how long the stream can last. Currently, the time limit for this operation is [30 seconds for Firefox](https://github.com/jimmywarting/StreamSaver.js/issues/292) and [5 minutes for Chromium-based browsers](https://github.com/jimmywarting/StreamSaver.js#best-practice) (with some exceptions https://github.com/GoogleChrome/developer.chrome.com/issues/2688; and workarounds in the wild do exist).
 
 ## Example
 
