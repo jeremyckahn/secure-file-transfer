@@ -212,3 +212,7 @@ declare module 'readable-stream-node-to-web' {
     readableStream: NodeJS.ReadableStream
   ): ReadableStream
 }
+
+declare module '@jeremyckahn/streamsaver' {
+  export * from 'streamsaver'
+}
