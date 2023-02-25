@@ -58,7 +58,6 @@
     "typescript": "^4.9.5"
   },
   "dependencies": {
-    "@jeremyckahn/streamsaver": "^2.0.9",
     "@types/streamsaver": "^2.0.1",
     "@types/webtorrent": "^0.109.3",
     "crypto": "npm:crypto-browserify@^3.12.0",
@@ -70,6 +69,7 @@
     "readable-stream-node-to-web": "^1.0.1",
     "readable-web-to-node-stream": "^3.0.2",
     "stream": "npm:stream-browserify@^3.0.0",
+    "streamsaver": "^2.0.6",
     "webtorrent": "^1.9.7",
     "wormhole-crypto": "^0.3.1"
   },
