@@ -2,6 +2,8 @@
 
 [**API documentation**](https://jeremyckahn.github.io/secure-file-transfer/)
 
+[**Source code**](https://github.com/jeremyckahn/secure-file-transfer)
+
 ## Install
 
 ```sh
