@@ -35,6 +35,12 @@
   },
   "name": "secure-file-transfer",
   "author": "Jeremy Kahn",
+  "description": "A library to encrypt and transfer files P2P in the browser",
+  "homepage": "http://jeremyckahn.github.io/secure-file-transfer/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jeremyckahn/secure-file-transfer.git"
+  },
   "module": "dist/secure-file-transfer.esm.js",
   "size-limit": [
     {
