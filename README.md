@@ -88,6 +88,12 @@ downloadButton.addEventListener("click", handleDownloadClick);
 
 If the encryption keys match, the file will be transferred directly from the offerer to the receiver and saved to the local file system (so long as both peers keep their pages open).
 
+## Troubleshooting
+
+### Files can't be downloaded from peers
+
+SFT uses [StreamSaver.js](https://github.com/jimmywarting/StreamSaver.js) to facilitate large file transfers. Download managers such as [FDM](https://www.freedownloadmanager.org/) are [known to interfere with StreamSaver.js](https://github.com/jimmywarting/StreamSaver.js/issues/325), so it is recommended to disable such download managers when using SFT to receive files.
+
 ## License
 
 MIT.
