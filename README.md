@@ -33,7 +33,7 @@ SFT has no file size limits. However, since transferred data is cached in Indexe
 
 ### Encryption
 
-Passwords are stretched into encryption keys with PBKDF2-HMAC-SHA256 (600,000 iterations), and file data is encrypted with [RFC 8188](https://www.rfc-editor.org/rfc/rfc8188) (AES-128-GCM) via `wormhole-crypto`, which authenticates every record, so tampered data or a wrong password causes decryption to fail. Security still depends on the strength of the password, so applications should encourage or enforce strong passwords. Peers must be running compatible versions of SFT to transfer files with each other.
+Passwords are stretched into encryption keys with PBKDF2-HMAC-SHA256 (600,000 iterations), and file data is encrypted with [RFC 8188](https://www.rfc-editor.org/rfc/rfc8188) (AES-128-GCM) via `wormhole-crypto`, which authenticates every record, so tampered data or a wrong password causes decryption to fail. In that case `download()` rejects with a `DecryptionError` (exported by this package) before returning any files, with `reason` set to `DecryptionErrorReason.WRONG_PASSWORD`, so you can catch it and ask for the password again; retrying does not download the torrent again. If data is corrupted or tampered with later in a file, that file's read stream emits a `DecryptionError` with `reason` set to `DecryptionErrorReason.CORRUPTED_DATA`. Errors reading the torrent data itself are passed through unchanged. Security still depends on the strength of the password, so applications should encourage or enforce strong passwords. Peers must be running compatible versions of SFT to transfer files with each other.
 
 ## Example
 
