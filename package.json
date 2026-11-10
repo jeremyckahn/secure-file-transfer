@@ -45,11 +45,29 @@
   "size-limit": [
     {
       "path": "dist/secure-file-transfer.cjs.production.min.js",
-      "limit": "10 KB"
+      "limit": "10 KB",
+      "ignore": [
+        "detectincognitojs",
+        "idb-chunk-store",
+        "readable-stream-node-to-web",
+        "readable-web-to-node-stream",
+        "streamsaver",
+        "webtorrent",
+        "wormhole-crypto"
+      ]
     },
     {
       "path": "dist/secure-file-transfer.esm.js",
-      "limit": "10 KB"
+      "limit": "10 KB",
+      "ignore": [
+        "detectincognitojs",
+        "idb-chunk-store",
+        "readable-stream-node-to-web",
+        "readable-web-to-node-stream",
+        "streamsaver",
+        "webtorrent",
+        "wormhole-crypto"
+      ]
     }
   ],
   "devDependencies": {
