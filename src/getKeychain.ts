@@ -12,6 +12,22 @@ const KEY_LENGTH_BYTES = 16
 const SALT_DOMAIN = 'secure-file-transfer:v1:'
 
 /**
+ * Returns the Web Crypto `SubtleCrypto` instance, or throws a descriptive
+ * error if it is unavailable (such as on non-secure origins).
+ */
+export const getSubtleCrypto = () => {
+  const subtle = window.crypto?.subtle
+
+  if (!subtle) {
+    throw new Error(
+      'secure-file-transfer requires the Web Crypto API, which is only available in secure contexts (HTTPS or localhost)'
+    )
+  }
+
+  return subtle
+}
+
+/**
  * Derives a wormhole-crypto `Keychain` from a user-provided password.
  *
  * The full password is stretched with PBKDF2-HMAC-SHA256 into 32 bytes of key
@@ -21,8 +37,8 @@ const SALT_DOMAIN = 'secure-file-transfer:v1:'
  * random per-stream salt and authenticates every record.
  */
 export const getKeychain = async (password: string) => {
+  const subtle = getSubtleCrypto()
   const encoder = new TextEncoder()
-  const { subtle } = window.crypto
 
   const passwordKey = await subtle.importKey(
     'raw',

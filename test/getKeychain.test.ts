@@ -14,6 +14,8 @@ jest.mock('wormhole-crypto', () => ({
 
 // eslint-disable-next-line import/first
 import { getKeychain, PBKDF2_ITERATIONS } from '../src/getKeychain'
+// eslint-disable-next-line import/first
+import { FileTransfer } from '../src'
 
 beforeAll(() => {
   Object.defineProperty(window, 'TextEncoder', {
@@ -54,9 +56,20 @@ describe('getKeychain', () => {
     expect(salt.equals(expected.subarray(16))).toBe(true)
   })
 
-  it('does not use the password as the key', async () => {
-    const { key } = await derive('abcdefghijklmnop')
-    expect(key.toString('utf8')).not.toBe('abcdefghijklmnop')
+  it('derives the same keychain for the same password', async () => {
+    // offer() and download() derive their keychains independently, so they
+    // must agree for a transfer to be decryptable.
+    const a = await derive('shared secret')
+    const b = await derive('shared secret')
+    expect(a.key.equals(b.key)).toBe(true)
+    expect(a.salt.equals(b.salt)).toBe(true)
+  })
+
+  it('derives different keychains for different passwords', async () => {
+    const a = await derive('password one')
+    const b = await derive('password two')
+    expect(a.key.equals(b.key)).toBe(false)
+    expect(a.salt.equals(b.salt)).toBe(false)
   })
 
   it('uses every character of long passwords', async () => {
@@ -68,5 +81,39 @@ describe('getKeychain', () => {
   it('handles multi-byte passwords', async () => {
     const { key } = await derive('pässwörd-ünïcødé-🔐')
     expect(key).toHaveLength(16)
+  })
+})
+
+describe('without Web Crypto', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'crypto', {
+      value: undefined,
+      configurable: true,
+    })
+  })
+
+  afterEach(() => {
+    Object.defineProperty(window, 'crypto', {
+      value: webcrypto,
+      configurable: true,
+    })
+  })
+
+  const secureContextError = /requires the Web Crypto API/
+
+  it('getKeychain rejects with a descriptive error', async () => {
+    await expect(getKeychain('password')).rejects.toThrow(secureContextError)
+  })
+
+  it('download fails before adding a torrent', async () => {
+    const fileTransfer = new FileTransfer()
+    const add = jest.fn()
+    ;(fileTransfer as any).webTorrentClient.add = add
+
+    await expect(
+      fileTransfer.download('magnet:?xt=urn:btih:test', 'password')
+    ).rejects.toThrow(secureContextError)
+    expect(add).not.toHaveBeenCalled()
+    expect(fileTransfer.isOffering('magnet:?xt=urn:btih:test')).toBe(false)
   })
 })

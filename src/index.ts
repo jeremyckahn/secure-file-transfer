@@ -11,7 +11,7 @@ import idbChunkStore from 'idb-chunk-store'
 import { detectIncognito } from 'detectincognitojs'
 import nodeToWebStream from 'readable-stream-node-to-web'
 import { ReadableWebToNodeStream } from 'readable-web-to-node-stream'
-import { getKeychain } from './getKeychain'
+import { getKeychain, getSubtleCrypto } from './getKeychain'
 
 /**
  * @see https://github.com/webtorrent/webtorrent/blob/master/docs/api.md#file-api
@@ -156,6 +156,15 @@ export class FileTransfer {
     const { onProgress, doSave, torrentOpts } = downloadOpts
     let torrent = this.torrents[magnetURI]
 
+    // Fail fast if Web Crypto is unavailable, before adding any torrent.
+    getSubtleCrypto()
+
+    // Key derivation is deliberately slow, so start it right away and let it
+    // run while the torrent downloads. The no-op catch prevents an unhandled
+    // rejection warning; errors are surfaced when the promise is awaited.
+    const keychainPromise = getKeychain(password)
+    keychainPromise.catch(() => {})
+
     const handleDownload = () => {
       onProgress?.(torrent.progress)
     }
@@ -192,7 +201,14 @@ export class FileTransfer {
       })
     }
 
-    const keychain = await getKeychain(password)
+    let keychain: Keychain
+
+    try {
+      keychain = await keychainPromise
+    } catch (e) {
+      torrent.off('download', handleDownload)
+      throw e
+    }
 
     const decryptedFiles = await Promise.all(
       torrent.files.map(async file => {
@@ -246,12 +262,13 @@ export class FileTransfer {
     offerOpts: OfferOpts = {}
   ) {
     const { torrentOpts } = offerOpts
-    const { isPrivate } = await detectIncognito()
+    const [{ isPrivate }, keychain] = await Promise.all([
+      detectIncognito(),
+      getKeychain(password),
+    ])
 
     const filesToSeed: File[] =
       files instanceof FileList ? Array.from(files) : files
-
-    const keychain = await getKeychain(password)
 
     const encryptedFiles = await Promise.all(
       filesToSeed.map(async file => {
