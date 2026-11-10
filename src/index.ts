@@ -10,8 +10,14 @@ import { plaintextSize, encryptedSize, Keychain } from 'wormhole-crypto'
 import idbChunkStore from 'idb-chunk-store'
 import { detectIncognito } from 'detectincognitojs'
 import nodeToWebStream from 'readable-stream-node-to-web'
-import { ReadableWebToNodeStream } from 'readable-web-to-node-stream'
 import { getKeychain, getSubtleCrypto } from './getKeychain'
+import {
+  assertDecryptable,
+  getDecryptedStream,
+  toNodeReadable,
+} from './decryption'
+
+export { DecryptionError } from './decryption'
 
 /**
  * @see https://github.com/webtorrent/webtorrent/blob/master/docs/api.md#file-api
@@ -91,17 +97,6 @@ export class FileTransfer {
   private webTorrentClient: WebTorrent.Instance
 
   private torrents: Record<Torrent['magnetURI'], Torrent> = {}
-
-  private async getDecryptedFileReadStream(
-    file: TorrentFile,
-    keychain: Keychain
-  ) {
-    const decryptedStream: ReadableStream = await keychain.decryptStream(
-      nodeToWebStream(file.createReadStream())
-    )
-
-    return decryptedStream
-  }
 
   private async saveTorrentFiles(files: TorrentFile[]) {
     for (const file of files) {
@@ -205,6 +200,14 @@ export class FileTransfer {
 
     try {
       keychain = await keychainPromise
+
+      // Decryption is lazy, so check up front that the files can be
+      // decrypted. Otherwise a wrong password would only surface once the
+      // caller started reading. The torrent stays cached, so retrying with
+      // the right password does not download it again.
+      await Promise.all(
+        torrent.files.map(file => assertDecryptable(file, keychain))
+      )
     } catch (e) {
       torrent.off('download', handleDownload)
       throw e
@@ -212,11 +215,8 @@ export class FileTransfer {
 
     const decryptedFiles = await Promise.all(
       torrent.files.map(async file => {
-        const readableStream = await this.getDecryptedFileReadStream(
-          file,
-          keychain
-        )
-        const nodeReadableSteam = new ReadableWebToNodeStream(readableStream)
+        const readableStream = await getDecryptedStream(file, keychain)
+        const nodeReadableSteam = toNodeReadable(readableStream, file.name)
 
         const decryptedFile: TorrentFile = Object.setPrototypeOf(
           {
