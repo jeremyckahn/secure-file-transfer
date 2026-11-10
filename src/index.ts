@@ -6,12 +6,12 @@ import WebTorrent, {
   TorrentOptions,
 } from 'webtorrent'
 import streamSaver from 'streamsaver'
-import { plaintextSize, encryptedSize } from 'wormhole-crypto'
+import { plaintextSize, encryptedSize, Keychain } from 'wormhole-crypto'
 import idbChunkStore from 'idb-chunk-store'
 import { detectIncognito } from 'detectincognitojs'
 import nodeToWebStream from 'readable-stream-node-to-web'
 import { ReadableWebToNodeStream } from 'readable-web-to-node-stream'
-import { getKeychain } from './getKeychain'
+import { getKeychain, getSubtleCrypto } from './getKeychain'
 
 /**
  * @see https://github.com/webtorrent/webtorrent/blob/master/docs/api.md#file-api
@@ -94,10 +94,8 @@ export class FileTransfer {
 
   private async getDecryptedFileReadStream(
     file: TorrentFile,
-    password: string
+    keychain: Keychain
   ) {
-    const keychain = getKeychain(password)
-
     const decryptedStream: ReadableStream = await keychain.decryptStream(
       nodeToWebStream(file.createReadStream())
     )
@@ -158,6 +156,15 @@ export class FileTransfer {
     const { onProgress, doSave, torrentOpts } = downloadOpts
     let torrent = this.torrents[magnetURI]
 
+    // Fail fast if Web Crypto is unavailable, before adding any torrent.
+    getSubtleCrypto()
+
+    // Key derivation is deliberately slow, so start it right away and let it
+    // run while the torrent downloads. The no-op catch prevents an unhandled
+    // rejection warning; errors are surfaced when the promise is awaited.
+    const keychainPromise = getKeychain(password)
+    keychainPromise.catch(() => {})
+
     const handleDownload = () => {
       onProgress?.(torrent.progress)
     }
@@ -194,11 +201,20 @@ export class FileTransfer {
       })
     }
 
+    let keychain: Keychain
+
+    try {
+      keychain = await keychainPromise
+    } catch (e) {
+      torrent.off('download', handleDownload)
+      throw e
+    }
+
     const decryptedFiles = await Promise.all(
       torrent.files.map(async file => {
         const readableStream = await this.getDecryptedFileReadStream(
           file,
-          password
+          keychain
         )
         const nodeReadableSteam = new ReadableWebToNodeStream(readableStream)
 
@@ -246,7 +262,10 @@ export class FileTransfer {
     offerOpts: OfferOpts = {}
   ) {
     const { torrentOpts } = offerOpts
-    const { isPrivate } = await detectIncognito()
+    const [{ isPrivate }, keychain] = await Promise.all([
+      detectIncognito(),
+      getKeychain(password),
+    ])
 
     const filesToSeed: File[] =
       files instanceof FileList ? Array.from(files) : files
@@ -258,9 +277,7 @@ export class FileTransfer {
         // for file.stream().
         const stream = (file.stream() as any) as ReadableStream
 
-        const encryptedStream = await getKeychain(password).encryptStream(
-          stream
-        )
+        const encryptedStream = await keychain.encryptStream(stream)
 
         // WebTorrent internally opens the ReadableStream for file data twice.
         // Normally this would not be an issue for File instances provided to
