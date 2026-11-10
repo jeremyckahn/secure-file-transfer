@@ -1,13 +1,51 @@
 import { Keychain } from 'wormhole-crypto'
 
-export const getKeychain = (password: string) => {
+/**
+ * PBKDF2-HMAC-SHA256 iteration count. Matches the current OWASP
+ * recommendation for PBKDF2-HMAC-SHA256.
+ * @see https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
+ */
+export const PBKDF2_ITERATIONS = 600_000
+
+const KEY_LENGTH_BYTES = 16
+
+const SALT_DOMAIN = 'secure-file-transfer:v1:'
+
+/**
+ * Derives a wormhole-crypto `Keychain` from a user-provided password.
+ *
+ * The full password is stretched with PBKDF2-HMAC-SHA256 into 32 bytes of key
+ * material: the first 16 bytes are used as the Keychain's main key and the
+ * remaining 16 bytes as the Keychain's salt. The file data itself is
+ * encrypted by wormhole-crypto using RFC 8188 (AES-128-GCM), which uses a
+ * random per-stream salt and authenticates every record.
+ */
+export const getKeychain = async (password: string) => {
   const encoder = new TextEncoder()
-  const keyLength = 16
-  const padding = new Array(keyLength).join('0')
-  const key = password.concat(padding).slice(0, keyLength)
-  const salt = window.location.origin.concat(padding).slice(0, keyLength)
+  const { subtle } = window.crypto
 
-  const keychain = new Keychain(encoder.encode(key), encoder.encode(salt))
+  const passwordKey = await subtle.importKey(
+    'raw',
+    encoder.encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits']
+  )
 
-  return keychain
+  const derivedBits = await subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      hash: 'SHA-256',
+      salt: encoder.encode(SALT_DOMAIN.concat(window.location.origin)),
+      iterations: PBKDF2_ITERATIONS,
+    },
+    passwordKey,
+    KEY_LENGTH_BYTES * 2 * 8
+  )
+
+  const derived = new Uint8Array(derivedBits)
+  const key = derived.slice(0, KEY_LENGTH_BYTES)
+  const salt = derived.slice(KEY_LENGTH_BYTES)
+
+  return new Keychain(key, salt)
 }

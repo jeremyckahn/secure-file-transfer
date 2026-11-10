@@ -31,6 +31,10 @@ By default, WebTorrent stores torrents in system memory. This is also not suitab
 
 SFT has no file size limits. However, since transferred data is cached in IndexedDB via idb-chunk-store (to minimize memory usage and enable larger file transfers), it is subject to browser [storage limits](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Browser_storage_limits_and_eviction_criteria#storage_limits).
 
+### Encryption
+
+Passwords are stretched into encryption keys with PBKDF2-HMAC-SHA256 (600,000 iterations), and file data is encrypted with [RFC 8188](https://www.rfc-editor.org/rfc/rfc8188) (AES-128-GCM) via `wormhole-crypto`, which authenticates every record, so tampered data or a wrong password causes decryption to fail. Security still depends on the strength of the password, so applications should encourage or enforce strong passwords. Peers must be running compatible versions of SFT to transfer files with each other.
+
 ## Example
 
 On one page have, [something like this](https://codesandbox.io/s/secure-file-transfer-offer-hhovi4?file=/src/index.ts) (in TypeScript):

@@ -6,7 +6,7 @@ import WebTorrent, {
   TorrentOptions,
 } from 'webtorrent'
 import streamSaver from 'streamsaver'
-import { plaintextSize, encryptedSize } from 'wormhole-crypto'
+import { plaintextSize, encryptedSize, Keychain } from 'wormhole-crypto'
 import idbChunkStore from 'idb-chunk-store'
 import { detectIncognito } from 'detectincognitojs'
 import nodeToWebStream from 'readable-stream-node-to-web'
@@ -94,10 +94,8 @@ export class FileTransfer {
 
   private async getDecryptedFileReadStream(
     file: TorrentFile,
-    password: string
+    keychain: Keychain
   ) {
-    const keychain = getKeychain(password)
-
     const decryptedStream: ReadableStream = await keychain.decryptStream(
       nodeToWebStream(file.createReadStream())
     )
@@ -194,11 +192,13 @@ export class FileTransfer {
       })
     }
 
+    const keychain = await getKeychain(password)
+
     const decryptedFiles = await Promise.all(
       torrent.files.map(async file => {
         const readableStream = await this.getDecryptedFileReadStream(
           file,
-          password
+          keychain
         )
         const nodeReadableSteam = new ReadableWebToNodeStream(readableStream)
 
@@ -251,6 +251,8 @@ export class FileTransfer {
     const filesToSeed: File[] =
       files instanceof FileList ? Array.from(files) : files
 
+    const keychain = await getKeychain(password)
+
     const encryptedFiles = await Promise.all(
       filesToSeed.map(async file => {
         // Force a type conversion here to prevent stream from being typed as a
@@ -258,9 +260,7 @@ export class FileTransfer {
         // for file.stream().
         const stream = (file.stream() as any) as ReadableStream
 
-        const encryptedStream = await getKeychain(password).encryptStream(
-          stream
-        )
+        const encryptedStream = await keychain.encryptStream(stream)
 
         // WebTorrent internally opens the ReadableStream for file data twice.
         // Normally this would not be an issue for File instances provided to
