@@ -13,7 +13,13 @@ jest.mock('wormhole-crypto', () => ({
 }))
 
 // eslint-disable-next-line import/first
-import { getKeychain, PBKDF2_ITERATIONS } from '../src/getKeychain'
+import * as getKeychainModule from '../src/getKeychain'
+// eslint-disable-next-line import/first
+import {
+  getKeychain,
+  getSubtleCrypto,
+  PBKDF2_ITERATIONS,
+} from '../src/getKeychain'
 // eslint-disable-next-line import/first
 import { FileTransfer } from '../src'
 
@@ -85,30 +91,18 @@ describe('getKeychain', () => {
 })
 
 describe('without Web Crypto', () => {
-  beforeEach(() => {
-    // Mirror a non-secure context, where browsers expose `crypto` but not
-    // `crypto.subtle`. (Setting `crypto` to `undefined` is also unreliable in
-    // older Node vm contexts, which fall back to the previous value.)
-    Object.defineProperty(window, 'crypto', {
-      value: {},
-      configurable: true,
-    })
-  })
-
-  afterEach(() => {
-    Object.defineProperty(window, 'crypto', {
-      value: webcrypto,
-      configurable: true,
-    })
-  })
-
   const secureContextError = /requires the Web Crypto API/
 
-  it('getKeychain rejects with a descriptive error', async () => {
-    await expect(getKeychain('password')).rejects.toThrow(secureContextError)
+  it('getSubtleCrypto throws a descriptive error', () => {
+    // Non-secure browser contexts expose `crypto` but not `crypto.subtle`.
+    expect(() => getSubtleCrypto({} as Crypto)).toThrow(secureContextError)
   })
 
   it('download fails before adding a torrent', async () => {
+    jest.spyOn(getKeychainModule, 'getSubtleCrypto').mockImplementation(() => {
+      throw new Error('secure-file-transfer requires the Web Crypto API')
+    })
+
     const fileTransfer = new FileTransfer()
     const add = jest.fn()
     ;(fileTransfer as any).webTorrentClient.add = add

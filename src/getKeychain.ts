@@ -15,8 +15,10 @@ const SALT_DOMAIN = 'secure-file-transfer:v1:'
  * Returns the Web Crypto `SubtleCrypto` instance, or throws a descriptive
  * error if it is unavailable (such as on non-secure origins).
  */
-export const getSubtleCrypto = () => {
-  const subtle = window.crypto?.subtle
+export const getSubtleCrypto = (
+  cryptoImpl: Crypto | undefined = window.crypto
+) => {
+  const subtle = cryptoImpl?.subtle
 
   if (!subtle) {
     throw new Error(
