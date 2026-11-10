@@ -68,9 +68,10 @@ const keychainFor = (makeStream: () => ReadableStream) => ({
   decryptStream: jest.fn(async () => makeStream()),
 })
 
-const torrentFile = (name: string) => ({
+/** A torrent file; `length` is its encrypted size (plaintext + 100 here). */
+const torrentFile = (name: string, length = 1000) => ({
   name,
-  length: 1000,
+  length,
   createReadStream: jest.fn(() => new EventEmitter()),
 })
 
@@ -227,6 +228,34 @@ describe('FileTransfer#download', () => {
     // The torrent stays cached so a retry with the right password does not
     // download it again.
     expect(fileTransfer.isOffering(magnetURI)).toBe(true)
+  })
+
+  it('checks the first file with content, skipping empty files', async () => {
+    // An empty file decrypts with any password, so it cannot reveal a wrong
+    // one. With plaintextSize mocked as length - 100, length 100 is empty.
+    const keychain = keychainFor(() => webStream([], authError()).stream)
+    mockGetKeychain.mockResolvedValue(keychain)
+    const emptyFile = torrentFile('empty.bin', 100)
+    const fileWithContent = torrentFile('a.bin')
+    const { fileTransfer } = withCachedTorrent([emptyFile, fileWithContent])
+
+    await expect(
+      fileTransfer.download(magnetURI, 'wrong password')
+    ).rejects.toBeInstanceOf(DecryptionError)
+    expect(emptyFile.createReadStream).not.toHaveBeenCalled()
+    expect(fileWithContent.createReadStream).toHaveBeenCalledTimes(1)
+  })
+
+  it('resolves without a check when every file is empty', async () => {
+    const keychain = keychainFor(() => webStream([]).stream)
+    mockGetKeychain.mockResolvedValue(keychain)
+    const { fileTransfer } = withCachedTorrent([torrentFile('empty.bin', 100)])
+
+    const files = await fileTransfer.download(magnetURI, 'any password')
+
+    expect(files.map(file => file.name)).toEqual(['empty.bin'])
+    // Only the returned file's own stream was opened, no probe.
+    expect(keychain.decryptStream).toHaveBeenCalledTimes(1)
   })
 
   it('resolves with the files for the right password', async () => {

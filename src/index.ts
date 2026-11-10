@@ -207,8 +207,15 @@ export class FileTransfer {
       // corruption in any file surfaces as an error on its read stream. The
       // torrent stays cached, so retrying with the right password does not
       // download it again.
-      const [firstFile] = torrent.files
-      if (firstFile) await assertDecryptable(firstFile, keychain)
+      //
+      // An empty file is encrypted as a header with no records, so it has
+      // nothing to authenticate and decrypts with any password. Check the
+      // first file that has content. If every file is empty there is nothing
+      // to decrypt, so there is nothing to check.
+      const fileWithContent = torrent.files.find(
+        file => plaintextSize(file.length) > 0
+      )
+      if (fileWithContent) await assertDecryptable(fileWithContent, keychain)
     } catch (e) {
       torrent.off('download', handleDownload)
       throw e
