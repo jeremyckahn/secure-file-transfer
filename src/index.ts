@@ -17,7 +17,7 @@ import {
   toNodeReadable,
 } from './decryption'
 
-export { DecryptionError } from './decryption'
+export { DecryptionError, DecryptionErrorReason } from './decryption'
 
 /**
  * @see https://github.com/webtorrent/webtorrent/blob/master/docs/api.md#file-api
@@ -201,13 +201,14 @@ export class FileTransfer {
     try {
       keychain = await keychainPromise
 
-      // Decryption is lazy, so check up front that the files can be
-      // decrypted. Otherwise a wrong password would only surface once the
-      // caller started reading. The torrent stays cached, so retrying with
-      // the right password does not download it again.
-      await Promise.all(
-        torrent.files.map(file => assertDecryptable(file, keychain))
-      )
+      // Decryption is lazy, so check up front that the password is right.
+      // Otherwise a wrong one would only surface once the caller started
+      // reading. Every file shares the keychain, so one file is enough;
+      // corruption in any file surfaces as an error on its read stream. The
+      // torrent stays cached, so retrying with the right password does not
+      // download it again.
+      const [firstFile] = torrent.files
+      if (firstFile) await assertDecryptable(firstFile, keychain)
     } catch (e) {
       torrent.off('download', handleDownload)
       throw e
