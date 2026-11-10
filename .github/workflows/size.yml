@@ -1,5 +1,9 @@
 name: size
 on: [pull_request]
+permissions:
+  contents: read
+  # Needed for the action to post its size report comment on the PR.
+  pull-requests: write
 jobs:
   size:
     runs-on: ubuntu-latest
@@ -7,6 +11,8 @@ jobs:
       CI_JOB_NUMBER: 1
     steps:
       - uses: actions/checkout@v3
-      - uses: andresz1/size-limit-action@v1
+      # Pinned to a commit SHA because this third-party action receives a
+      # write-scoped token. This is the commit `v1` currently resolves to.
+      - uses: andresz1/size-limit-action@e7493a72a44b113341c0cf6186ab49c17c4b65c1 # v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
