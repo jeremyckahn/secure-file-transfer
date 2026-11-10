@@ -86,8 +86,11 @@ describe('getKeychain', () => {
 
 describe('without Web Crypto', () => {
   beforeEach(() => {
+    // Mirror a non-secure context, where browsers expose `crypto` but not
+    // `crypto.subtle`. (Setting `crypto` to `undefined` is also unreliable in
+    // older Node vm contexts, which fall back to the previous value.)
     Object.defineProperty(window, 'crypto', {
-      value: undefined,
+      value: {},
       configurable: true,
     })
   })
