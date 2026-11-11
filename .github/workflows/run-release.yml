@@ -8,6 +8,13 @@ on:
         required: true
         default: 'patch'
 
+permissions:
+  # Push the version commit and create the GitHub release.
+  contents: write
+  # Lets npm authenticate with a short-lived OIDC token via trusted
+  # publishing, once it is configured for this package on npmjs.com.
+  id-token: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -29,7 +36,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          # Node 24 ships npm 11, which supports trusted publishing.
+          node-version: 24
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
@@ -44,17 +52,20 @@ jobs:
         # Sets new package version as ${{ env.PACKAGE_VERSION }}
       - uses: jozsefsallai/node-package-version@v1.0.4
 
+      # Publish before pushing the version commit, so a failed publish leaves
+      # main untouched and the release can simply be re-run.
+      - name: Publish to NPM
+        run: npm publish
+        env:
+          # Used only if trusted publishing is not configured for the package.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Push tag commit
         run: |
           git push
 
-      - name: Publish to NPM
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Prepare Web Artifacts
-        run: zip secure-file-transfer-${{ env.PACKAGE_VERSION }}.zip -r dist/*
+        run: zip secure-file-transfer-web-${{ env.PACKAGE_VERSION }}.zip -r dist/*
 
       - name: Create Release
         id: create_release
@@ -66,5 +77,7 @@ jobs:
           name: ${{ env.PACKAGE_VERSION }}
           draft: false
           prerelease: false
+          # Fail instead of silently publishing a release without the zip.
+          fail_on_unmatched_files: true
           files: |
             ./secure-file-transfer-web-${{ env.PACKAGE_VERSION }}.zip
